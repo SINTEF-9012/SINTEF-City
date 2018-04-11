@@ -4,13 +4,13 @@ thing fragment auxMsgs {
 	message data(sclass: UInt8, value: UInt16)
 	message lightOff()
 	message lightOn()
-	message second() @xms_tic "1000"
+	message second() @xms_tic "2000"
 }
 
 thing fragment serialMsgs {
-	message sensorData(sclass: UInt8, value: UInt16)
-	message ledOff()
-	message ledOn()
+	message sensorData(sclass: UInt8, value: UInt16)	@code "10"
+	message ledOff()									@code "20"
+	message ledOn()										@code "30"
 }
 
 thing fragment SensorFragment includes auxMsgs {
@@ -43,5 +43,12 @@ thing fragment Controller includes auxMsgs, serialMsgs {
 	provided port serial_interface {
 		sends sensorData
 		receives ledOff, ledOn
+	}
+}
+
+thing fragment RPiFragment includes serialMsgs {
+	provided port serial_interface {
+		sends ledOff, ledOn
+		receives sensorData
 	}
 }

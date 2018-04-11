@@ -20,7 +20,7 @@ thing Sensor includes SensorFragment, TimerFragment
 	function readSensor() : UInt16
 	do
 		if (stype == SensorType:DIGITAL) do return `digitalRead(`&pin&`)` end
-		else do return `analogRead(`&pin&`)` end
+		else do return `analogRead(`& pin &`)` end
 	end
 	
 	statechart SensorReader init Reading {
@@ -38,20 +38,21 @@ thing Sensor includes SensorFragment, TimerFragment
 thing LED includes LEDFragment {
 	statechart LEDChart init Off {
 		on entry do
-			`pinMode(4, OUTPUT);`
-			`digitalWrite(4, LOW);`
+			`pinMode(A3, OUTPUT);`
 		end
 		
 		state Off {
+			on entry `analogWrite(A3, 200);`
+			
 			transition ->On
 			event led_interface?lightOn
-			action `digitalWrite(4, HIGH);`
 		}
 		
 		state On {
+			on entry `analogWrite(A3, 0);`
+			
 			transition ->Off
 			event led_interface?lightOff
-			action `digitalWrite(4, LOW);`
 		}
 	}
 }
@@ -62,6 +63,8 @@ thing Arduino includes Controller, TimerFragment
 {
 	statechart ControllerStates init Waiting {
 		state Waiting {
+			on entry led_interface!lightOff()
+			
 			internal event m: sensor_interface?data
 			action serial_interface!sensorData(m.sclass as UInt8, m.value)
 			
@@ -75,9 +78,11 @@ thing Arduino includes Controller, TimerFragment
 }
 
 protocol Timer;
+
 protocol Serial
-	@serializer			"binary"
-	@serial_baudrate	"9600"
+	@serial_baudrate		"115200"
+	@serializer				"binary"
+	@reverse_endianness     "true"
 ;
 
 configuration SensorReaderCfg 
@@ -85,15 +90,15 @@ configuration SensorReaderCfg
 {
 	// Sensors
 	instance movementSensor: Sensor
-		set movementSensor.pin = 0
+		set movementSensor.pin = 2
 		set movementSensor.stype = SensorType:DIGITAL
 		set movementSensor.sclass = 1 
 	instance lightSensor: Sensor
-		set lightSensor.pin = 1
+		set lightSensor.pin = `A0`
 		set lightSensor.stype = SensorType:ANALOG
 		set lightSensor.sclass = 0
 	instance tempHumSensor: Sensor
-		set tempHumSensor.pin = 2
+		set tempHumSensor.pin = `A2`
 		set tempHumSensor.stype = SensorType:ANALOG
 		set tempHumSensor.sclass = 2
 	
