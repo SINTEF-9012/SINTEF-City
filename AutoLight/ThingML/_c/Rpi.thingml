@@ -1,0 +1,50 @@
+import "datatypes.thingml" from stl
+import "../SensorReader.thingml"
+
+thing RPi includes RPiFragment {
+	property logSensorData: Boolean = false
+	property lightSensorRead: UInt16 = 1024
+	property movementSensorRead: UInt16 = 0
+	property temphumSensorRead: UInt16 = 0
+	
+	function saveSensorReading(sclass: UInt8, value: UInt16)
+	do
+		if (sclass == 0) do lightSensorRead = value end
+		else if (sclass == 1) do movementSensorRead = value end
+		else if (sclass == 2) do temphumSensorRead = value end
+		
+		if (lightSensorRead < 500) do serial_interface!ledOn() end
+		else do serial_interface!ledOff() end
+		
+		if (logSensorData) do
+			print "Light\t"
+			print lightSensorRead
+			print "\n"
+			print "Movement\t"
+			print movementSensorRead
+			print "\n"
+			print "TempHum\t"
+			print temphumSensorRead
+			print "\n"
+		end
+	end
+	
+	statechart RPiStates init Reading{
+		state Reading {
+			internal event m: serial_interface?sensorData
+			action saveSensorReading(m.sclass, m.value)
+		}
+	}
+}
+
+protocol Serial
+	@serial_path_to_device	"/dev/ttyACM0"
+	@serial_baudrate		"115200"
+	@serializer				"binary"
+	@reverse_endianness     "true"
+;
+
+configuration rpiConfig {
+	instance rpi: RPi
+	connector rpi.serial_interface over Serial
+}
