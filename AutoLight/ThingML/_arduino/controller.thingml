@@ -1,0 +1,115 @@
+import "../SensorReader.thingml"
+import "datatypes.thingml" from stl
+
+enumeration SensorType
+@c_type	"uint8_t"
+@c_byte_size "1"
+{
+	DIGITAL	@enum_val "0"
+	ANALOG	@enum_val "1"
+}
+
+thing Sensor includes SensorFragment, TimerFragment
+@pim "SensorReader"
+@platform "arduino"
+{
+	property pin: Int8
+	property stype: SensorType // 0 = digital, 1 = analog
+	property sclass: UInt8 // 0 = Light, 1 = Movement, 2 = TempHum
+	
+	function readSensor() : UInt16
+	do
+		if (stype == SensorType:DIGITAL) do return `digitalRead(`&pin&`)` end
+		else do return `analogRead(`&pin&`)` end
+	end
+	
+	statechart SensorReader init Reading {
+		on entry do
+			`pinMode(` & pin & `, INPUT);`
+		end
+		
+		state Reading {
+			internal event timer_interface?second
+			action sensor_interface!data(sclass, readSensor())
+		}
+	}
+}
+
+thing LED includes LEDFragment {
+	statechart LEDChart init Off {
+		on entry do
+			`pinMode(4, OUTPUT);`
+			`digitalWrite(4, LOW);`
+		end
+		
+		state Off {
+			transition ->On
+			event led_interface?lightOn
+			action `digitalWrite(4, HIGH);`
+		}
+		
+		state On {
+			transition ->Off
+			event led_interface?lightOff
+			action `digitalWrite(4, LOW);`
+		}
+	}
+}
+
+thing Arduino includes Controller, TimerFragment
+@pim "Controller"
+@platform "arduino"
+{
+	statechart ControllerStates init Waiting {
+		state Waiting {
+			internal event m: sensor_interface?data
+			action serial_interface!sensorData(m.sclass as UInt8, m.value)
+			
+			internal event serial_interface?ledOff
+			action led_interface!lightOff()
+			
+			internal event serial_interface?ledOn
+			action led_interface!lightOn()
+		}
+	}
+}
+
+protocol Timer;
+protocol Serial
+	@serializer			"binary"
+	@serial_baudrate	"9600"
+;
+
+configuration SensorReaderCfg 
+@arduino_stdout "Serial"
+{
+	// Sensors
+	instance movementSensor: Sensor
+		set movementSensor.pin = 0
+		set movementSensor.stype = SensorType:DIGITAL
+		set movementSensor.sclass = 1 
+	instance lightSensor: Sensor
+		set lightSensor.pin = 1
+		set lightSensor.stype = SensorType:ANALOG
+		set lightSensor.sclass = 0
+	instance tempHumSensor: Sensor
+		set tempHumSensor.pin = 2
+		set tempHumSensor.stype = SensorType:ANALOG
+		set tempHumSensor.sclass = 2
+	
+	instance LED: LED
+	instance controller: Arduino
+	
+	connector movementSensor.timer_interface over Timer
+	connector lightSensor.timer_interface over Timer
+	connector tempHumSensor.timer_interface over Timer
+	connector controller.timer_interface over Timer
+	
+	connector controller.sensor_interface => movementSensor.sensor_interface
+	connector controller.sensor_interface => lightSensor.sensor_interface
+	connector controller.sensor_interface => tempHumSensor.sensor_interface
+	
+	connector controller.led_interface => LED.led_interface
+	
+	connector controller.serial_interface over Serial
+}

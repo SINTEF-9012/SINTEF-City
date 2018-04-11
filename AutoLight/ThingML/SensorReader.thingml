@@ -1,0 +1,47 @@
+import "datatypes.thingml" from stl
+
+thing fragment auxMsgs {
+	message data(sclass: UInt8, value: UInt16)
+	message lightOff()
+	message lightOn()
+	message second() @xms_tic "1000"
+}
+
+thing fragment serialMsgs {
+	message sensorData(sclass: UInt8, value: UInt16)
+	message ledOff()
+	message ledOn()
+}
+
+thing fragment SensorFragment includes auxMsgs {
+	provided port sensor_interface {
+		sends data
+	}
+}
+
+thing fragment TimerFragment includes auxMsgs {
+	provided port timer_interface {
+		receives second
+	}
+}
+
+thing fragment LEDFragment includes auxMsgs {
+	provided port led_interface {
+		receives lightOff, lightOn
+	}
+}
+
+thing fragment Controller includes auxMsgs, serialMsgs {
+	required port sensor_interface {
+		receives data
+	}
+	
+	required port led_interface {
+		sends lightOff, lightOn
+	}
+	
+	provided port serial_interface {
+		sends sensorData
+		receives ledOff, ledOn
+	}
+}
