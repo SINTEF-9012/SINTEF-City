@@ -3,28 +3,33 @@ import "../SensorReader.thingml"
 
 thing RPi includes RPiFragment {
 	property logSensorData: Boolean = false
-	property lightSensorRead: UInt16 = 1024
-	property movementSensorRead: UInt16 = 0
-	property temphumSensorRead: UInt16 = 0
+	property lightSensorRead: Float = 1024
+	property movementSensorRead: Float = 0
+	property temperatureSensorRead: Float = 0.0
+	property humiditySensorRead: Float = 0.0
 	
-	function saveSensorReading(sclass: UInt8, value: UInt16)
+	function saveSensorReading(sclass: UInt8, value: Float)
 	do
 		if (sclass == 0) do lightSensorRead = value end
 		else if (sclass == 1) do movementSensorRead = value end
-		else if (sclass == 2) do temphumSensorRead = value end
+		else if (sclass == 2) do temperatureSensorRead = value end
+		else if (sclass == 3) do humiditySensorRead = value end
 		
 		if (lightSensorRead < 500) do serial_interface!ledOn() end
 		else do serial_interface!ledOff() end
 		
 		if (logSensorData) do
-			print "Light\t"
+			print "Light\t\t"
 			print lightSensorRead
 			print "\n"
 			print "Movement\t"
 			print movementSensorRead
 			print "\n"
-			print "TempHum\t"
-			print temphumSensorRead
+			print "Temperature\t"
+			print temperatureSensorRead
+			print "\n"
+			print "Humidity\t"
+			print humiditySensorRead
 			print "\n"
 		end
 	end
@@ -46,5 +51,6 @@ protocol Serial
 
 configuration rpiConfig {
 	instance rpi: RPi
+		set rpi.logSensorData = true
 	connector rpi.serial_interface over Serial
 }

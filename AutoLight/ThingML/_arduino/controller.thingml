@@ -10,22 +10,28 @@ enumeration SensorType
 }
 
 thing Sensor includes SensorFragment, TimerFragment
-@pim "SensorReader"
-@platform "arduino"
+// See http://wiki.seeedstudio.com/Grove-Temperature_and_Humidity_Sensor_Pro/
+@c_header `#include "DHT.h"`
+@c_header `DHT dht(A2, DHT22);`
+@c_header `bool startedDht = false;`
 {
 	property pin: Int8
 	property stype: SensorType // 0 = digital, 1 = analog
-	property sclass: UInt8 // 0 = Light, 1 = Movement, 2 = TempHum
+	property sclass: UInt8 // 0 = Light, 1 = Movement, 2 = Temperature, 3 = Humidity
 	
 	function readSensor() : UInt16
 	do
-		if (stype == SensorType:DIGITAL) do return `digitalRead(`&pin&`)` end
-		else do return `analogRead(`& pin &`)` end
+		if (sclass == 2) do return `dht.readTemperature();` end
+		else if (sclass == 3) do return `dht.readHumidity();` end
+		else if (stype == SensorType:DIGITAL) do return `(float)digitalRead(`&pin&`)` end
+		else do return `(float)analogRead(`& pin &`)` end
 	end
 	
 	statechart SensorReader init Reading {
 		on entry do
-			`pinMode(` & pin & `, INPUT);`
+			// sclass 2 = TempHum, See http://wiki.seeedstudio.com/Grove-Temperature_and_Humidity_Sensor_Pro/
+			if (sclass == 2 or sclass == 3) do `if(!startedDht) { dht.begin(); startedDht = true; }` end
+			else do `pinMode(` & pin & `, INPUT);` end
 		end
 		
 		state Reading {
@@ -97,22 +103,28 @@ configuration SensorReaderCfg
 		set lightSensor.pin = `A0`
 		set lightSensor.stype = SensorType:ANALOG
 		set lightSensor.sclass = 0
-	instance tempHumSensor: Sensor
-		set tempHumSensor.pin = `A2`
-		set tempHumSensor.stype = SensorType:ANALOG
-		set tempHumSensor.sclass = 2
+	instance temperatureSensor: Sensor
+		set temperatureSensor.pin = `A2`
+		set temperatureSensor.stype = SensorType:ANALOG
+		set temperatureSensor.sclass = 2
+	instance humiditySensor: Sensor
+		set humiditySensor.pin = `A2`
+		set humiditySensor.stype = SensorType:ANALOG
+		set humiditySensor.sclass = 3
 	
 	instance LED: LED
 	instance controller: Arduino
 	
 	connector movementSensor.timer_interface over Timer
 	connector lightSensor.timer_interface over Timer
-	connector tempHumSensor.timer_interface over Timer
+	connector temperatureSensor.timer_interface over Timer
+	connector humiditySensor.timer_interface over Timer
 	connector controller.timer_interface over Timer
 	
 	connector controller.sensor_interface => movementSensor.sensor_interface
 	connector controller.sensor_interface => lightSensor.sensor_interface
-	connector controller.sensor_interface => tempHumSensor.sensor_interface
+	connector controller.sensor_interface => temperatureSensor.sensor_interface
+	connector controller.sensor_interface => humiditySensor.sensor_interface
 	
 	connector controller.led_interface => LED.led_interface
 	

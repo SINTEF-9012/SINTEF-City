@@ -1,14 +1,14 @@
 import "datatypes.thingml" from stl
 
 thing fragment auxMsgs {
-	message data(sclass: UInt8, value: UInt16)
+	message data(sclass: UInt8, value: Float)
 	message lightOff()
 	message lightOn()
 	message second() @xms_tic "2000"
 }
 
 thing fragment serialMsgs {
-	message sensorData(sclass: UInt8, value: UInt16)	@code "10"
+	message sensorData(sclass: UInt8, value: Float)		@code "10"
 	message ledOff()									@code "20"
 	message ledOn()										@code "30"
 }
